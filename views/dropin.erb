@@ -1,0 +1,26 @@
+<script src="https://js.braintreegateway.com/web/dropin/1.0.2/js/dropin.min.js"></script>
+
+
+<body>
+  <div id="dropin-container"></div>
+  <button id="submit-button">Request payment method</button>
+  <script>
+    var button = document.querySelector('#submit-button');
+
+    braintree.dropin.create({
+      authorization: "sandbox_54fcdrnq_yxb4zvxjdctbbppt",
+      selector: '#dropin-container',
+      paypal: {
+        flow: 'checkout',
+        amount: '10.00',
+        currency: 'USD'
+        }
+    }, function (createErr, instance) {
+      button.addEventListener('click', function () {
+        instance.requestPaymentMethod(function (requestPaymentMethodErr, payload) {
+          // Submit payload.nonce to your server
+        });
+      });
+    });
+  </script>
+</body>
