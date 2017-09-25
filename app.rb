@@ -11,15 +11,11 @@ Braintree::Configuration.public_key = 'xktj76v3mb4nt7wx'
 Braintree::Configuration.private_key = '2632842e6df4fff163c877944980da46'
 
 get "/" do
-  erb :index
+  erb :hosted_fields
 end
 
 get "/dropin" do
   erb :dropin
-end
-
-get "/hosted_fields" do
-  erb :hosted_fields
 end
 
 post "/checkout" do
