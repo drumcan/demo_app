@@ -363,6 +363,7 @@ function displayVenmoButton(venmoInstance) {
 
     venmoInstance.tokenize(function (tokenizeErr, payload) {
       venmoButton.removeAttribute('disabled');
+      serverSubmit(payload);
     });
   });
 }
