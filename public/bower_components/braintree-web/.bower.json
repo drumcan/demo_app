@@ -24,12 +24,12 @@
     "*",
     "!*.js"
   ],
-  "version": "3.22.1",
-  "_release": "3.22.1",
+  "version": "3.22.2",
+  "_release": "3.22.2",
   "_resolution": {
     "type": "version",
-    "tag": "3.22.1",
-    "commit": "cfdd7502154fe6d5fb62b0f3697629edc55a2caa"
+    "tag": "3.22.2",
+    "commit": "616ce12dcc7b1a2b7844df72eef42d887d1a128d"
   },
   "_source": "https://github.com/braintree/braintree-web-bower.git",
   "_target": "^3.20.1",
