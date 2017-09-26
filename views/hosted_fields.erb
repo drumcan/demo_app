@@ -363,7 +363,7 @@ function displayVenmoButton(venmoInstance) {
 
     venmoInstance.tokenize(function (tokenizeErr, payload) {
       if (tokenizeErr) {
-        alert(tokenizeErr);
+        alert(JSON.stringify(tokenizeErr));
       } else {
       venmoButton.removeAttribute('disabled');
       serverSubmit(payload);
