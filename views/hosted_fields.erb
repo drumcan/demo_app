@@ -362,8 +362,12 @@ function displayVenmoButton(venmoInstance) {
     venmoButton.disabled = true;
 
     venmoInstance.tokenize(function (tokenizeErr, payload) {
+      if (tokenizeErr) {
+        alert(tokenizeErr);
+      } else {
       venmoButton.removeAttribute('disabled');
       serverSubmit(payload);
+    }
     });
   });
 }
