@@ -144,7 +144,7 @@
     <div id="applepay_form" style="display:none" class="row">
       <div class="col-md-4"> </div>
       <div class="col-md-4">
-        <div id="applepay-button" class="apple-pay-button apple-pay-button-white" style="display:none" ></div>
+        <div id="applepay-button" class="apple-pay-button apple-pay-button-white-with-line" style="display:none" ></div>
       </div>
      </div>
     <div class="col-md-4"></div>
@@ -499,7 +499,7 @@ V.on("payment.success", function (payment) {
 }
 
 function finishApplePay() {
-  applepayButton.addEventListener('click', function (event) {
+  document.getElementById('applepay-button').addEventListener('click', function (event) {
     event.preventDefault();
 
     paymentRequest = applePayInstance.createPaymentRequest({
