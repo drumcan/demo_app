@@ -144,7 +144,7 @@
     <div id="applepay_form" style="display:none" class="row">
       <div class="col-md-4"> </div>
       <div class="col-md-4">
-        <div class="apple-pay-button apple-pay-button-white button" style="display:none;" id="applepay-button"></div>
+        <div id="applepay-button" class="apple-pay-button apple-pay-button-white" style="display:none" ></div>
       </div>
      </div>
     <div class="col-md-4"></div>
@@ -222,7 +222,7 @@ var creditCardForm = document.getElementById('credit_card_form');
 var nonce = document.getElementById('payment_method_nonce');
 var paypalButton = document.querySelector('#paypal-button');
 var venmoButton = document.getElementById('venmo-button');
-var applepayButton = document.querySelector('applepay-button');
+var applepayButton = document.getElementById('applepay-button');
 
 if (!window.ApplePaySession) {
   console.error('This device does not support Apple Pay');
