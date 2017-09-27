@@ -1,5 +1,6 @@
 <script src="bower_components/braintree-web/client.js"></script>
 <script src="bower_components/braintree-web/hosted-fields.js"></script>
+<script src="bower_components/braintree-web/apple-pay.js"></script>
 <script src="bower_components/braintree-web/paypal-checkout.js"></script>
 <script src="bower_components/braintree-web/visa-checkout.js"></script>
 <script src="bower_components/braintree-web/masterpass.js"></script>
@@ -499,7 +500,7 @@ V.on("payment.success", function (payment) {
 }
 
 function finishApplePay() {
-  document.getElementById('applepay-button').addEventListener('click', function (event) {
+  applepayButton.addEventListener('click', function (event) {
     event.preventDefault();
 
     paymentRequest = applePayInstance.createPaymentRequest({
