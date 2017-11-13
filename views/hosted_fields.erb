@@ -20,8 +20,6 @@
     <h1>Braintree JS V.3</h1>
   </div>
 </div>
-
-
   <div class="row">
     <div class="col-md-4"> </div>
     <div class="col-md-4">
@@ -51,20 +49,7 @@
    </div>
    <div class="col-md-4"></div>
  </div>
- <div class="row">
-   <div class="col-md-4"> </div>
-   <div class="col-md-4">
-     <label><input value="5" type="radio" name="formselector" onclick="displayForm(this)">Via Venmo</label>
-   </div>
-   <div class="col-md-4"></div>
- </div>
- <div class="row">
-   <div class="col-md-4"> </div>
-   <div class="col-md-4">
-     <label><input value="6" type="radio" name="formselector" onclick="displayForm(this)">Via ApplePay</label>
-   </div>
-   <div class="col-md-4"></div>
- </div>
+
 
 
 <form id="credit_card_form"  method="post" action="/checkout" role="form">
@@ -132,26 +117,6 @@
     <div class="col-md-4"></div>
     </div>
 
-    <div id="venmo_form" style="display:none" class="row">
-      <div class="col-md-4"> </div>
-      <div class="col-md-4">
-         <div id="venmo-button" style="display:none" class="button">
-         <img alt="Pay with Venmo" src="blue_venmo_button_280x48.svg" />
-       </div>
-      </div>
-      <div class="col-md-4"></div>
-    </div>
-
-    <div id="applepay_form" style="display:none" class="row">
-      <div class="col-md-4"> </div>
-      <div class="col-md-4">
-        <div id="applepay-button" class="apple-pay-button apple-pay-button-white-with-line" style="display:none" ></div>
-      </div>
-     </div>
-    <div class="col-md-4"></div>
-  </div>
-
-
    <div class="row">
      <div class="col-md-4"></div>
      <div class="col-md-4">
@@ -162,34 +127,7 @@
 </form>
 
 <style>
-.apple-pay-button {
-    display: inline-block;
-    background-size: 100% 60%;
-    background-repeat: no-repeat;
-    background-position: 50% 50%;
-    border-radius: 5px;
-    padding: 20px 0px 20px 0px;
-    box-sizing: border-box;
-    min-width: 200px;
-    min-height: 32px;
-    max-height: 64px;
-}
 
-.apple-pay-button-black {
-    background-image: -webkit-named-image(apple-pay-logo-white);
-    background-color: black;
-}
-
-.apple-pay-button-white {
-    background-image: -webkit-named-image(apple-pay-logo-black);vier9
-    background-color: white;
-}
-
-.apple-pay-button-white-with-line {
-    background-image: -webkit-named-image(apple-pay-logo-black);
-    background-color: white;
-    border: .5px solid black;
-}
 .cvv {
   height: 36pt;
   width: 50pt;
@@ -222,16 +160,7 @@ var submitButton = document.getElementById('checkout_button');
 var creditCardForm = document.getElementById('credit_card_form');
 var nonce = document.getElementById('payment_method_nonce');
 var paypalButton = document.querySelector('#paypal-button');
-var venmoButton = document.getElementById('venmo-button');
-var applepayButton = document.getElementById('applepay-button');
 
-if (!window.ApplePaySession) {
-  console.error('This device does not support Apple Pay');
-}
-
-if (ApplePaySession.canMakePayments()) {
-      document.getElementById("applepay-button").style.display = "block";
-}
 
 braintree.client.create({
   authorization: "sandbox_54fcdrnq_yxb4zvxjdctbbppt"
@@ -349,26 +278,7 @@ braintree.client.create({
       }, '#paypal-button'); // the PayPal button will be rendered in an html element with the id `paypal-button`
     });
 
-    braintree.venmo.create({
-     client: client,
-     // Add allowNewBrowserTab: false if your checkout page does not support
-     // relaunching in a new tab when returning from the Venmo app. This can
-     // be omitted otherwise.
-     allowNewBrowserTab: false
-     }, function (venmoErr, venmoInstance) {
-       if (venmoErr) {
-         console.error('Error creating Venmo:', venmoErr);
-       return;
-     }
 
-      // Verify browser support before proceeding.
-      if (!venmoInstance.isBrowserSupported()) {
-        console.log('Browser does not support Venmo');
-      return;
-     }
-
-     displayVenmoButton(venmoInstance);
-});
 
 
     braintree.visaCheckout.create({
@@ -394,24 +304,7 @@ braintree.client.create({
        masterpassAvailable(masterpassInstance);
     });
 
-    braintree.applePay.create({
-      client: client
-    }, function (applePayErr, applePay) {
-      if (applePayErr) {
-        console.error('Error creating applePayInstance:', applePayErr);
-        return;
-      }
-      applePayInstance = applePay;
-      console.log(applePayInstance.merchantIdentifier);
-      console.log('applepay instance');
-      ApplePaySession.canMakePaymentsWithActiveCard(applePayInstance.merchantIdentifier).then(function (canMakePaymentsWithActiveCard) {
-        if (canMakePaymentsWithActiveCard) {
-          finishApplePay();
-        } else {
-          console.log("cannot make payments with active cards");
-        }
-      });
-    });
+
 
 
 
@@ -428,23 +321,7 @@ braintree.client.create({
     });
 });
 
-function displayVenmoButton(venmoInstance) {
-  // Assumes that venmoButton is initially display: none.
-  venmoButton.style.display = 'block';
 
-  venmoButton.addEventListener('click', function () {
-    venmoButton.disabled = true;
-
-    venmoInstance.tokenize(function (tokenizeErr, payload) {
-      if (tokenizeErr) {
-        console.log(tokenizeErr);
-      } else {
-      venmoButton.removeAttribute('disabled');
-      serverSubmit(payload);
-    }
-    });
-  });
-}
 
 function masterpassAvailable(masterpassInstance) {
   masterpassButton.classList.remove('button-hidden');
@@ -499,56 +376,7 @@ V.on("payment.success", function (payment) {
 });
 }
 
-function finishApplePay() {
-  applepayButton.addEventListener('click', function (event) {
-    event.preventDefault();
 
-    paymentRequest = applePayInstance.createPaymentRequest({
-      total: {
-        label: 'My Store',
-        amount: '19.99'
-      }
-    });
-    console.log(paymentRequest.countryCode);
-    console.log(paymentRequest.currencyCode);
-    console.log(paymentRequest.merchantCapabilities);
-    console.log(paymentRequest.supportedNetworks);
-
-    var session = new ApplePaySession(1, paymentRequest);
-
-    session.onvalidatemerchant = function (event) {
-      applePayInstance.performValidation({
-        validationURL: event.validationURL,
-        displayName: 'My Store'
-      }, function (validationErr, merchantSession) {
-        if (validationErr) {
-          // You should show an error to the user, e.g. 'Apple Pay failed to load.'
-          console.error('Error validating merchant:', validationErr);
-          session.abort();
-          return;
-        }
-        session.completeMerchantValidation(merchantSession);
-      });
-    };
-
-    session.onpaymentauthorized = function (event) {
-      console.log('Your shipping address is:', event.payment.shippingContact);
-
-      applePayInstance.tokenize({
-        token: event.payment.token
-      }, function (tokenizeErr, payload) {
-        if (tokenizeErr) {
-          console.error('Error tokenizing Apple Pay:', tokenizeErr);
-          session.completePayment(ApplePaySession.STATUS_FAILURE);
-          return;
-        }
-        session.completePayment(ApplePaySession.STATUS_SUCCESS);
-        serverSubmit(payload);
-      });
-    };
-    session.begin();
-  });
-}
 
 function serverSubmit(payload) {
   $('#payment_method_nonce').val(payload.nonce);
@@ -564,49 +392,31 @@ function displayForm(c) {
            document.getElementById("paypal_form").style.display = 'none';
            document.getElementById("visa_checkout_form").style.display = 'none';
            document.getElementById("masterpass_form").style.display = 'none';
-           document.getElementById("venmo_form").style.display = 'none';
-           document.getElementById("applepay_form").style.display = 'none';
        } else if (c.value == "2") {
            document.getElementById("credit_card").style.display = 'none';
            document.getElementById("checkout_button").style.display = 'none';
            document.getElementById("paypal_form").style.display = 'inline';
            document.getElementById("visa_checkout_form").style.display = 'none';
            document.getElementById("masterpass_form").style.display = 'none';
-           document.getElementById("venmo_form").style.display = 'none';
-           document.getElementById("applepay_form").style.display = 'none';
        } else if (c.value == "3") {
            document.getElementById("credit_card").style.display = 'none';
            document.getElementById("checkout_button").style.display = 'none';
            document.getElementById("paypal_form").style.display = 'none';
            document.getElementById("visa_checkout_form").style.display = 'inline';
            document.getElementById("masterpass_form").style.display = 'none';
-           document.getElementById("venmo_form").style.display = 'none';
-           document.getElementById("applepay_form").style.display = 'none';
        } else if (c.value == "4") {
            document.getElementById("credit_card").style.display = 'none';
            document.getElementById("checkout_button").style.display = 'none';
            document.getElementById("paypal_form").style.display = 'none';
            document.getElementById("visa_checkout_form").style.display = 'none';
            document.getElementById("masterpass_form").style.display = 'inline';
-           document.getElementById("venmo_form").style.display = 'none';
-           document.getElementById("applepay_form").style.display = 'none';
         } else if (c.value == "5") {
             document.getElementById("credit_card").style.display = 'none';
             document.getElementById("checkout_button").style.display = 'none';
             document.getElementById("paypal_form").style.display = 'none';
             document.getElementById("visa_checkout_form").style.display = 'none';
             document.getElementById("masterpass_form").style.display = 'none';
-            document.getElementById("venmo_form").style.display = 'inline';
-            document.getElementById("applepay_form").style.display = 'none';
-         } else if (c.value == "6") {
-             document.getElementById("credit_card").style.display = 'none';
-             document.getElementById("checkout_button").style.display = 'none';
-             document.getElementById("paypal_form").style.display = 'none';
-             document.getElementById("visa_checkout_form").style.display = 'none';
-             document.getElementById("masterpass_form").style.display = 'none';
-             document.getElementById("venmo_form").style.display = 'none';
-             document.getElementById("applepay_form").style.display = 'inline';
-          } else {}
+         } else {}
       }
 
 
