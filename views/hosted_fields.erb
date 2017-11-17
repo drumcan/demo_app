@@ -49,6 +49,13 @@
    </div>
    <div class="col-md-4"></div>
  </div>
+ <div class="row" id:"venmo_radio_button" style="display:none">
+   <div class="col-md-4"> </div>
+   <div class="col-md-4">
+     <label><input value="5" type="radio" name="formselector" onclick="displayForm(this)">Via Venmo</label>
+   </div>
+   <div class="col-md-4"></div>
+ </div>
 
 
 
@@ -117,6 +124,18 @@
     <div class="col-md-4"></div>
     </div>
 
+    <div id="venmo_form" style="display:none" class="row">
+      <div class="col-md-4"> </div>
+      <div class="col-md-4">
+        <div id="venmo-button" style ='display:none'>
+          <a href="#">
+          <img alt="Checkout with Venmo" role="button" src="/blue_venmo_button_280x48.svg" />
+          </a>
+       </div>
+      </div>
+     <div class="col-md-4"></div>
+     </div>
+
    <div class="row">
      <div class="col-md-4"></div>
      <div class="col-md-4">
@@ -160,6 +179,8 @@ var submitButton = document.getElementById('checkout_button');
 var creditCardForm = document.getElementById('credit_card_form');
 var nonce = document.getElementById('payment_method_nonce');
 var paypalButton = document.querySelector('#paypal-button');
+var venmoButton = document.getElementById('venmo-button');
+var venmoRadioButton = document.getElementById("venmo_radio_button");
 
 
 braintree.client.create({
@@ -304,7 +325,40 @@ braintree.client.create({
        masterpassAvailable(masterpassInstance);
     });
 
+    braintree.venmo.create({
+     client: client,
+  // Add allowNewBrowserTab: false if your checkout page does not support
+  // relaunching in a new tab when returning from the Venmo app. This can
+  // be omitted otherwise.
+     allowNewBrowserTab: false
+     }, function (venmoErr, venmoInstance) {
+       if (venmoErr) {
+         console.error('Error creating Venmo:', venmoErr);
+         return;
+         }
 
+     // Verify browser support before proceeding.
+     if (venmoInstance.isBrowserSupported()) {
+        venmoRadioButton.style.display = "inline"
+    return;
+  }
+
+  displayVenmoButton(venmoInstance);
+
+  // Check if tokenization results already exist. This occurs when your
+  // checkout page is relaunched in a new tab. This step can be omitted
+  // if allowNewBrowserTab is false.
+  if (venmoInstance.hasTokenizationResult()) {
+    venmoInstance.tokenize(function (tokenizeErr, payload) {
+      if (err) {
+        handleVenmoError(tokenizeErr);
+      } else {
+        handleVenmoSuccess(payload);
+      }
+    });
+    return;
+  }
+});
 
 
 
@@ -321,7 +375,20 @@ braintree.client.create({
     });
 });
 
+function displayVenmoButton(venmoInstance) {
+  // Assumes that venmoButton is initially display: none.
+  venmoButton.style.display = 'block';
 
+  venmoButton.addEventListener('click', function () {
+    venmoButton.disabled = true;
+
+    venmoInstance.tokenize(function (tokenizeErr, payload) {
+      venmoButton.removeAttribute('disabled');
+      serverSubmit(payload);
+
+    });
+  });
+}
 
 function masterpassAvailable(masterpassInstance) {
   masterpassButton.classList.remove('button-hidden');
@@ -348,6 +415,8 @@ function masterpassAvailable(masterpassInstance) {
    });
  });
 };
+
+
 
 function visaCheckoutInitialized(visaCheckoutInstance) {
   var baseInitOptions = {
@@ -392,30 +461,35 @@ function displayForm(c) {
            document.getElementById("paypal_form").style.display = 'none';
            document.getElementById("visa_checkout_form").style.display = 'none';
            document.getElementById("masterpass_form").style.display = 'none';
+           document.getElementById("venmo_form").style.display = 'none';
        } else if (c.value == "2") {
            document.getElementById("credit_card").style.display = 'none';
            document.getElementById("checkout_button").style.display = 'none';
            document.getElementById("paypal_form").style.display = 'inline';
            document.getElementById("visa_checkout_form").style.display = 'none';
            document.getElementById("masterpass_form").style.display = 'none';
+           document.getElementById("venmo_form").style.display = 'none';
        } else if (c.value == "3") {
            document.getElementById("credit_card").style.display = 'none';
            document.getElementById("checkout_button").style.display = 'none';
            document.getElementById("paypal_form").style.display = 'none';
            document.getElementById("visa_checkout_form").style.display = 'inline';
            document.getElementById("masterpass_form").style.display = 'none';
+           document.getElementById("venmo_form").style.display = 'none';
        } else if (c.value == "4") {
            document.getElementById("credit_card").style.display = 'none';
            document.getElementById("checkout_button").style.display = 'none';
            document.getElementById("paypal_form").style.display = 'none';
            document.getElementById("visa_checkout_form").style.display = 'none';
            document.getElementById("masterpass_form").style.display = 'inline';
+           document.getElementById("venmo_form").style.display = 'none';
         } else if (c.value == "5") {
             document.getElementById("credit_card").style.display = 'none';
             document.getElementById("checkout_button").style.display = 'none';
             document.getElementById("paypal_form").style.display = 'none';
             document.getElementById("visa_checkout_form").style.display = 'none';
             document.getElementById("masterpass_form").style.display = 'none';
+            document.getElementById("venmo_form").style.display = 'inline';
          } else {}
       }
 
