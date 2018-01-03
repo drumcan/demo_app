@@ -340,10 +340,11 @@ braintree.client.create({
      // Verify browser support before proceeding.
      if (venmoInstance.isBrowserSupported()) {
         venmoRadioButton.style.display = "inline"
+        displayVenmoButton(venmoInstance);
     return;
   }
 
-  displayVenmoButton(venmoInstance);
+
 
   // Check if tokenization results already exist. This occurs when your
   // checkout page is relaunched in a new tab. This step can be omitted
