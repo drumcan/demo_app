@@ -15,6 +15,7 @@ get "/" do
 end
 
 get "/dropin" do
+  @client_token = Braintree::ClientToken.generate(:customer_id => "251484083")
   erb :dropin
 end
 

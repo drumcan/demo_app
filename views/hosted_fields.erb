@@ -364,7 +364,8 @@ braintree.client.create({
 
     braintree.dataCollector.create({
       client: client,
-      kount: true
+      kount: true,
+      paypal: true
         }, function (err, dataCollectorInstance) {
          if (err) {
          // Handle error in creation of data collector
@@ -376,8 +377,10 @@ braintree.client.create({
 });
 
 function displayVenmoButton(venmoInstance) {
+  console.log("got to displayVenmoButton");
   // Assumes that venmoButton is initially display: none.
-  venmoButton.style.display = 'block';
+  venmoButton.style.display = 'inline-block';
+  console.log("button should have new display properties");
 
   venmoButton.addEventListener('click', function () {
     venmoButton.disabled = true;
