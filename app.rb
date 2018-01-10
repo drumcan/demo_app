@@ -41,6 +41,7 @@ if result.success?
   if result.transaction.payment_instrument_type != "paypal_account"
     return {:result => "Success! Braintree Transaction ID: #{result.transaction.id} | Kount Transaction id: #{result.transaction.risk_data.id}"}.to_json
   else
+    p result
     return {:result => "Success! Braintree Transaction ID: #{result.transaction.id}"}.to_json
   end
   else
