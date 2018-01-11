@@ -39,7 +39,7 @@ result = Braintree::Transaction.sale(
 if result.success?
   p result
   content_type :json
-  if result.transaction.payment_instrument_type != "paypal_account" || "venmo_account"
+  if result.transaction.payment_instrument_type != "paypal_account" or "venmo_account"
     return {:result => "Success! Braintree Transaction ID: #{result.transaction.id} | Kount Transaction id: #{result.transaction.risk_data.id}"}.to_json
   else
     return {:result => "Success! Braintree Transaction ID: #{result.transaction.id}"}.to_json
