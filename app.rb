@@ -20,7 +20,6 @@ get "/dropin" do
 end
 
 post "/checkout" do
-p params
 result = Braintree::Transaction.sale(
   :amount => "100.00",
   :payment_method_nonce => params[:payment_method_nonce],
