@@ -282,21 +282,21 @@ braintree.client.create({
 
     var bankLogin = {
       displayName: 'My Merchant',
-      ownershipType: $('input[name="ownership-type"]:checked').val(),
+      ownershipType: "personal",
       billingAddress: {
-        streetAddress: $('#billing-street-address').val(),
-        extendedAddress: $('#billing-extended-address').val(),
-        locality: $('#billing-locality').val(),
-        region: $('#billing-region').val(),
-        postalCode: $('#billing-postal-code').val()
+        streetAddress: "222 Merchandise Mart Plaza",
+        extendedAddress: "",
+        locality: "Chicago",
+        region: "US",
+        postalCode: "60625"
       }
     };
 
     if (bankLogin.ownershipType === 'personal') {
-      bankLogin.firstName = $('#first-name').val();
-      bankLogin.lastName = $('#last-name').val();
+      bankLogin.firstName = "Jon";
+      bankLogin.lastName = "Snow";
     } else {
-      bankLogin.businessName = $('#business-name').val();
+      bankLogin.businessName = "PayPal";
     }
 
     usBankAccountInstance.tokenize({
