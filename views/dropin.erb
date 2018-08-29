@@ -14,7 +14,10 @@
         flow: 'checkout',
         amount: '10.00',
         currency: 'USD'
-        }
+      },
+      dataCollector: {
+        kount: true // Required if Kount fraud data collection is enabled
+      }
     }, function (createErr, instance) {
       button.addEventListener('click', function () {
         instance.requestPaymentMethod(function (requestPaymentMethodErr, payload) {
