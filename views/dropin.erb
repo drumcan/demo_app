@@ -19,8 +19,9 @@
         kount: true // Required if Kount fraud data collection is enabled
       }
     }, function (createErr, instance) {
+      console.log(instance._client.getConfiguration().gatewayConfiguration.kount)
       button.addEventListener('click', function () {
-        console.log(instance._client.getConfiguration().gatewayConfiguration.kount)
+
         instance.requestPaymentMethod(function (requestPaymentMethodErr, payload) {
           // Submit payload.nonce to your server
         });
