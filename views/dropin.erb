@@ -1,4 +1,4 @@
-<script src="https://js.braintreegateway.com/web/dropin/1.0.2/js/dropin.min.js"></script>
+<script src="https://js.braintreegateway.com/web/dropin/1.12.0/js/dropin.min.js"></script>
 
 
 <body>
@@ -19,11 +19,12 @@
         kount: true // Required if Kount fraud data collection is enabled
       }
     }, function (createErr, instance) {
+      console.log(createErr);
       console.log(instance._client.getConfiguration().gatewayConfiguration.kount)
       button.addEventListener('click', function () {
 
         instance.requestPaymentMethod(function (requestPaymentMethodErr, payload) {
-          // Submit payload.nonce to your server
+          console.log(payload);
         });
       });
     });

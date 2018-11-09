@@ -202,7 +202,7 @@ var achButton = document.getElementById("bank-login-button");
 
 
 braintree.client.create({
-  authorization: "sandbox_wr6wv6sp_yxb4zvxjdctbbppt"
+  authorization: "eyJ2ZXJzaW9uIjozLCJhdXRob3JpemF0aW9uRmluZ2VycHJpbnQiOiI1YTc0OGFhYmQzMmEyMmE1YWM2ZjU3YmY5NGUyZDhmYTdjNDAzODYwYTA5ZDM0MWFkMmJlMTZkNzVjODQxOTZhfGNyZWF0ZWRfYXQ9MjAxOC0xMS0wOVQyMTo1Njo0OS4wMzQxMjgzODIrMDAwMFx1MDAyNm1lcmNoYW50X2FjY291bnRfaWQ9YnJhaW50cmVlXHUwMDI2bWVyY2hhbnRfaWQ9eXhiNHp2eGpkY3RiYnBwdFx1MDAyNnB1YmxpY19rZXk9eGt0ajc2djNtYjRudDd3eCIsImNvbmZpZ1VybCI6Imh0dHBzOi8vYXBpLnNhbmRib3guYnJhaW50cmVlZ2F0ZXdheS5jb206NDQzL21lcmNoYW50cy95eGI0enZ4amRjdGJicHB0L2NsaWVudF9hcGkvdjEvY29uZmlndXJhdGlvbiIsImdyYXBoUUwiOnsidXJsIjoiaHR0cHM6Ly9wYXltZW50cy5zYW5kYm94LmJyYWludHJlZS1hcGkuY29tL2dyYXBocWwiLCJkYXRlIjoiMjAxOC0wNS0wOCJ9LCJtZXJjaGFudEFjY291bnRJZCI6ImJyYWludHJlZSJ9"
 }, function (err, client) {
 
   if (err) {
@@ -325,6 +325,11 @@ braintree.client.create({
       paypal.Button.render({
         env: 'sandbox', // or 'sandbox'
         locale: 'en_US',
+        style: {
+        size: 'small',
+        color: 'gold',
+        shape: 'pill'
+},
 
         payment: function () {
           return paypalCheckoutInstance.createPayment({
