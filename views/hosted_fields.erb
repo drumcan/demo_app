@@ -256,8 +256,9 @@ braintree.client.create({
         }
       });
 
-      submitButton.onclick = function() {
-        event.preventDefault();
+      submitButton.addEventListener("click", function(e) {
+        e = e || window.event;
+        e.preventDefault();
         hostedFields.tokenize(function (err, payload) {
         if (err) {
           if (err.type === 'CUSTOMER') {
@@ -269,7 +270,7 @@ braintree.client.create({
         }
       serverSubmit(payload);
       });
-    }
+    });
   });
 
   braintree.usBankAccount.create({
