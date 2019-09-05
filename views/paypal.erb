@@ -16,6 +16,9 @@
     </div>
   </div>
   <script>
+
+  var nonce = document.getElementById('payment_method_nonce');
+
      braintree.client.create({
        authorization: 'sandbox_9qpx3yqx_6fwrg6ccn34c95qj'
      }).then(function (clientInstance) {
@@ -25,11 +28,11 @@
      }).then(function (paypalCheckoutInstance) {
        return paypal.Buttons({
          style: {
-    layout:  'vertical',
-    color:   'blue',
-    shape:   'rect',
-    label:   'paypal'
-  },
+           layout:  'vertical',
+           color:   'blue',
+           shape:   'rect',
+           label:   'paypal'
+     },
        createOrder: function () {
          return paypalCheckoutInstance.createPayment({
            flow: 'checkout',
@@ -43,6 +46,7 @@
        onApprove: function (data, actions) {
          // some logic here before tokenization happens below
          return paypalCheckoutInstance.tokenizePayment(data).then(function (payload) {
+           serverSubmit(payload);
            // Submit payload.nonce to your server
          });
        },
@@ -58,15 +62,19 @@
    }).catch(function (err) {
     console.error('Error!', err);
    });
+
+   function serverSubmit(payload) {
+     $('#payment_method_nonce').val(payload.nonce);
+     console.log(JSON.stringify(payload));
+     alert(JSON.stringify(payload));
+     document.getElementById("paypal_form").submit();
+   }
   </script>
-  <div id="paypal_form">
+  <div id="paypal_form" action="/checkout" role="form">
     <div class="col-md-4"> </div>
     <div class="col-md-4">
        <div id="paypal-button"></div>
-    </div>
-    <div class="col-md-4">
-       <div id="paypal-credit-button"></div>
-    </div>
     <div class="col-md-4"></div>
+    <input type="hidden" id="payment_method_nonce" name="payment_method_nonce" value="payment_method_nonce">
   </div>
 </body>
