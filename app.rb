@@ -19,6 +19,10 @@ get "/dropin" do
   erb :dropin
 end
 
+get "/paypal" do
+  erb :paypal
+end
+
 post "/checkout" do
 result = Braintree::Transaction.sale(
   :amount => "100.00",

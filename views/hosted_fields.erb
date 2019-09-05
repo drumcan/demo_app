@@ -108,6 +108,9 @@
   <div class="col-md-4">
      <div id="paypal-button"></div>
   </div>
+  <div class="col-md-4">
+     <div id="paypal-credit-button"></div>
+  </div>
   <div class="col-md-4"></div>
 </div>
 
@@ -196,6 +199,7 @@ var submitButton = document.getElementById('checkout_button');
 var creditCardForm = document.getElementById('credit_card_form');
 var nonce = document.getElementById('payment_method_nonce');
 var paypalButton = document.querySelector('#paypal-button');
+var paypalCreditButton = document.querySelector('#paypal-credit-button');
 var venmoButton = document.getElementById('venmo-button');
 var venmoRadioButton = document.getElementById("venmo_radio_button");
 var achButton = document.getElementById("bank-login-button");
@@ -326,23 +330,30 @@ braintree.client.create({
       paypal.Button.render({
         env: 'sandbox', // or 'sandbox'
         locale: 'en_US',
+        commit: true, // Required for local payment methods
+        funding: {
+          allowed: [
+          // paypal.FUNDING.IDEAL
+          ]
+        },
         style: {
-        size: 'small',
-        color: 'gold',
-        shape: 'pill'
-},
+          layout: 'vertical', // Required for local payment methods
+          size: 'medium', // Must be at least medium for vertical layout
+          color: 'gold',
+          shape: 'pill'
+        },
 
         payment: function () {
           return paypalCheckoutInstance.createPayment({
             flow: 'checkout',
-            amount: '10.00',
-            displayName: "Dan's Produce",
-            currency: 'USD'
+            amount: 10.00, // Required
+            currency: 'EUR' // Required
           });
         },
 
         onAuthorize: function (data, actions) {
           return paypalCheckoutInstance.tokenizePayment(data).then(function (payload) {
+            console.log("this is a wallet transaction")
           serverSubmit(payload);
 
           });
@@ -356,7 +367,9 @@ braintree.client.create({
           console.error('checkout.js error', err);
         }
       }, '#paypal-button'); // the PayPal button will be rendered in an html element with the id `paypal-button`
-    });
+
+
+});
 
 
 

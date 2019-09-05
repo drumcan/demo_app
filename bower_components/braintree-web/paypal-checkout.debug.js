@@ -1,4 +1,67 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.braintree || (g.braintree = {})).paypalCheckout = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}(g.braintree || (g.braintree = {})).paypalCheckout = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(_dereq_,module,exports){
+(function (global){
+'use strict';
+
+var PromisePolyfill = _dereq_('promise-polyfill');
+
+module.exports = global.Promise || PromisePolyfill;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"promise-polyfill":7}],2:[function(_dereq_,module,exports){
+'use strict';
+
+var Promise = _dereq_('./lib/promise');
+var scriptPromiseCache = {};
+
+function loadScript(options) {
+  var attrs, container, script, scriptLoadPromise;
+  var stringifiedOptions = JSON.stringify(options);
+
+  if (!options.forceScriptReload) {
+    scriptLoadPromise = scriptPromiseCache[stringifiedOptions];
+
+    if (scriptLoadPromise) {
+      return scriptLoadPromise;
+    }
+  }
+
+  script = document.createElement('script');
+  attrs = options.dataAttributes || {};
+  container = options.container || document.head;
+
+  script.src = options.src;
+  script.id = options.id;
+  script.async = true;
+
+  Object.keys(attrs).forEach(function (key) {
+    script.setAttribute('data-' + key, attrs[key]);
+  });
+
+  scriptLoadPromise = new Promise(function (resolve, reject) {
+    script.addEventListener('load', function () {
+      resolve(script);
+    });
+    script.addEventListener('error', function () {
+      reject(new Error(options.src + ' failed to load.'));
+    });
+    script.addEventListener('abort', function () {
+      reject(new Error(options.src + ' has aborted.'));
+    });
+    container.appendChild(script);
+  });
+
+  scriptPromiseCache[stringifiedOptions] = scriptLoadPromise;
+
+  return scriptLoadPromise;
+}
+
+loadScript.clearCache = function () {
+  scriptPromiseCache = {};
+};
+
+module.exports = loadScript;
+
+},{"./lib/promise":1}],3:[function(_dereq_,module,exports){
 'use strict';
 
 function deferred(fn) {
@@ -7,14 +70,21 @@ function deferred(fn) {
     var args = arguments;
 
     setTimeout(function () {
-      fn.apply(null, args);
+      try {
+        fn.apply(null, args);
+      } catch (err) {
+        /* eslint-disable no-console */
+        console.log('Error in callback function');
+        console.log(err);
+        /* eslint-enable no-console */
+      }
     }, 1);
   };
 }
 
 module.exports = deferred;
 
-},{}],2:[function(_dereq_,module,exports){
+},{}],4:[function(_dereq_,module,exports){
 'use strict';
 
 function once(fn) {
@@ -30,7 +100,7 @@ function once(fn) {
 
 module.exports = once;
 
-},{}],3:[function(_dereq_,module,exports){
+},{}],5:[function(_dereq_,module,exports){
 'use strict';
 
 function promiseOrCallback(promise, callback) { // eslint-disable-line consistent-return
@@ -49,7 +119,7 @@ function promiseOrCallback(promise, callback) { // eslint-disable-line consisten
 
 module.exports = promiseOrCallback;
 
-},{}],4:[function(_dereq_,module,exports){
+},{}],6:[function(_dereq_,module,exports){
 'use strict';
 
 var deferred = _dereq_('./lib/deferred');
@@ -66,6 +136,7 @@ function wrapPromise(fn) {
       callback = args.pop();
       callback = once(deferred(callback));
     }
+
     return promiseOrCallback(fn.apply(this, args), callback); // eslint-disable-line no-invalid-this
   };
 }
@@ -105,242 +176,268 @@ wrapPromise.wrapPrototype = function (target, options) {
 
 module.exports = wrapPromise;
 
-},{"./lib/deferred":1,"./lib/once":2,"./lib/promise-or-callback":3}],5:[function(_dereq_,module,exports){
-(function (root) {
+},{"./lib/deferred":3,"./lib/once":4,"./lib/promise-or-callback":5}],7:[function(_dereq_,module,exports){
+'use strict';
 
-  // Store setTimeout reference so promise-polyfill will be unaffected by
-  // other code modifying setTimeout (like sinon.useFakeTimers())
-  var setTimeoutFunc = setTimeout;
-
-  function noop() {}
-  
-  // Polyfill for Function.prototype.bind
-  function bind(fn, thisArg) {
-    return function () {
-      fn.apply(thisArg, arguments);
-    };
-  }
-
-  function Promise(fn) {
-    if (typeof this !== 'object') throw new TypeError('Promises must be constructed via new');
-    if (typeof fn !== 'function') throw new TypeError('not a function');
-    this._state = 0;
-    this._handled = false;
-    this._value = undefined;
-    this._deferreds = [];
-
-    doResolve(fn, this);
-  }
-
-  function handle(self, deferred) {
-    while (self._state === 3) {
-      self = self._value;
+/**
+ * @this {Promise}
+ */
+function finallyConstructor(callback) {
+  var constructor = this.constructor;
+  return this.then(
+    function(value) {
+      return constructor.resolve(callback()).then(function() {
+        return value;
+      });
+    },
+    function(reason) {
+      return constructor.resolve(callback()).then(function() {
+        return constructor.reject(reason);
+      });
     }
-    if (self._state === 0) {
-      self._deferreds.push(deferred);
+  );
+}
+
+// Store setTimeout reference so promise-polyfill will be unaffected by
+// other code modifying setTimeout (like sinon.useFakeTimers())
+var setTimeoutFunc = setTimeout;
+
+function noop() {}
+
+// Polyfill for Function.prototype.bind
+function bind(fn, thisArg) {
+  return function() {
+    fn.apply(thisArg, arguments);
+  };
+}
+
+/**
+ * @constructor
+ * @param {Function} fn
+ */
+function Promise(fn) {
+  if (!(this instanceof Promise))
+    throw new TypeError('Promises must be constructed via new');
+  if (typeof fn !== 'function') throw new TypeError('not a function');
+  /** @type {!number} */
+  this._state = 0;
+  /** @type {!boolean} */
+  this._handled = false;
+  /** @type {Promise|undefined} */
+  this._value = undefined;
+  /** @type {!Array<!Function>} */
+  this._deferreds = [];
+
+  doResolve(fn, this);
+}
+
+function handle(self, deferred) {
+  while (self._state === 3) {
+    self = self._value;
+  }
+  if (self._state === 0) {
+    self._deferreds.push(deferred);
+    return;
+  }
+  self._handled = true;
+  Promise._immediateFn(function() {
+    var cb = self._state === 1 ? deferred.onFulfilled : deferred.onRejected;
+    if (cb === null) {
+      (self._state === 1 ? resolve : reject)(deferred.promise, self._value);
       return;
     }
-    self._handled = true;
-    Promise._immediateFn(function () {
-      var cb = self._state === 1 ? deferred.onFulfilled : deferred.onRejected;
-      if (cb === null) {
-        (self._state === 1 ? resolve : reject)(deferred.promise, self._value);
+    var ret;
+    try {
+      ret = cb(self._value);
+    } catch (e) {
+      reject(deferred.promise, e);
+      return;
+    }
+    resolve(deferred.promise, ret);
+  });
+}
+
+function resolve(self, newValue) {
+  try {
+    // Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
+    if (newValue === self)
+      throw new TypeError('A promise cannot be resolved with itself.');
+    if (
+      newValue &&
+      (typeof newValue === 'object' || typeof newValue === 'function')
+    ) {
+      var then = newValue.then;
+      if (newValue instanceof Promise) {
+        self._state = 3;
+        self._value = newValue;
+        finale(self);
+        return;
+      } else if (typeof then === 'function') {
+        doResolve(bind(then, newValue), self);
         return;
       }
-      var ret;
-      try {
-        ret = cb(self._value);
-      } catch (e) {
-        reject(deferred.promise, e);
-        return;
+    }
+    self._state = 1;
+    self._value = newValue;
+    finale(self);
+  } catch (e) {
+    reject(self, e);
+  }
+}
+
+function reject(self, newValue) {
+  self._state = 2;
+  self._value = newValue;
+  finale(self);
+}
+
+function finale(self) {
+  if (self._state === 2 && self._deferreds.length === 0) {
+    Promise._immediateFn(function() {
+      if (!self._handled) {
+        Promise._unhandledRejectionFn(self._value);
       }
-      resolve(deferred.promise, ret);
     });
   }
 
-  function resolve(self, newValue) {
-    try {
-      // Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
-      if (newValue === self) throw new TypeError('A promise cannot be resolved with itself.');
-      if (newValue && (typeof newValue === 'object' || typeof newValue === 'function')) {
-        var then = newValue.then;
-        if (newValue instanceof Promise) {
-          self._state = 3;
-          self._value = newValue;
-          finale(self);
-          return;
-        } else if (typeof then === 'function') {
-          doResolve(bind(then, newValue), self);
-          return;
-        }
-      }
-      self._state = 1;
-      self._value = newValue;
-      finale(self);
-    } catch (e) {
-      reject(self, e);
-    }
+  for (var i = 0, len = self._deferreds.length; i < len; i++) {
+    handle(self, self._deferreds[i]);
   }
+  self._deferreds = null;
+}
 
-  function reject(self, newValue) {
-    self._state = 2;
-    self._value = newValue;
-    finale(self);
-  }
+/**
+ * @constructor
+ */
+function Handler(onFulfilled, onRejected, promise) {
+  this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null;
+  this.onRejected = typeof onRejected === 'function' ? onRejected : null;
+  this.promise = promise;
+}
 
-  function finale(self) {
-    if (self._state === 2 && self._deferreds.length === 0) {
-      Promise._immediateFn(function() {
-        if (!self._handled) {
-          Promise._unhandledRejectionFn(self._value);
-        }
-      });
-    }
-
-    for (var i = 0, len = self._deferreds.length; i < len; i++) {
-      handle(self, self._deferreds[i]);
-    }
-    self._deferreds = null;
-  }
-
-  function Handler(onFulfilled, onRejected, promise) {
-    this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null;
-    this.onRejected = typeof onRejected === 'function' ? onRejected : null;
-    this.promise = promise;
-  }
-
-  /**
-   * Take a potentially misbehaving resolver function and make sure
-   * onFulfilled and onRejected are only called once.
-   *
-   * Makes no guarantees about asynchrony.
-   */
-  function doResolve(fn, self) {
-    var done = false;
-    try {
-      fn(function (value) {
+/**
+ * Take a potentially misbehaving resolver function and make sure
+ * onFulfilled and onRejected are only called once.
+ *
+ * Makes no guarantees about asynchrony.
+ */
+function doResolve(fn, self) {
+  var done = false;
+  try {
+    fn(
+      function(value) {
         if (done) return;
         done = true;
         resolve(self, value);
-      }, function (reason) {
+      },
+      function(reason) {
         if (done) return;
         done = true;
         reject(self, reason);
-      });
-    } catch (ex) {
-      if (done) return;
-      done = true;
-      reject(self, ex);
-    }
+      }
+    );
+  } catch (ex) {
+    if (done) return;
+    done = true;
+    reject(self, ex);
   }
+}
 
-  Promise.prototype['catch'] = function (onRejected) {
-    return this.then(null, onRejected);
-  };
+Promise.prototype['catch'] = function(onRejected) {
+  return this.then(null, onRejected);
+};
 
-  Promise.prototype.then = function (onFulfilled, onRejected) {
-    var prom = new (this.constructor)(noop);
+Promise.prototype.then = function(onFulfilled, onRejected) {
+  // @ts-ignore
+  var prom = new this.constructor(noop);
 
-    handle(this, new Handler(onFulfilled, onRejected, prom));
-    return prom;
-  };
+  handle(this, new Handler(onFulfilled, onRejected, prom));
+  return prom;
+};
 
-  Promise.all = function (arr) {
+Promise.prototype['finally'] = finallyConstructor;
+
+Promise.all = function(arr) {
+  return new Promise(function(resolve, reject) {
+    if (!arr || typeof arr.length === 'undefined')
+      throw new TypeError('Promise.all accepts an array');
     var args = Array.prototype.slice.call(arr);
+    if (args.length === 0) return resolve([]);
+    var remaining = args.length;
 
-    return new Promise(function (resolve, reject) {
-      if (args.length === 0) return resolve([]);
-      var remaining = args.length;
-
-      function res(i, val) {
-        try {
-          if (val && (typeof val === 'object' || typeof val === 'function')) {
-            var then = val.then;
-            if (typeof then === 'function') {
-              then.call(val, function (val) {
+    function res(i, val) {
+      try {
+        if (val && (typeof val === 'object' || typeof val === 'function')) {
+          var then = val.then;
+          if (typeof then === 'function') {
+            then.call(
+              val,
+              function(val) {
                 res(i, val);
-              }, reject);
-              return;
-            }
+              },
+              reject
+            );
+            return;
           }
-          args[i] = val;
-          if (--remaining === 0) {
-            resolve(args);
-          }
-        } catch (ex) {
-          reject(ex);
         }
+        args[i] = val;
+        if (--remaining === 0) {
+          resolve(args);
+        }
+      } catch (ex) {
+        reject(ex);
       }
-
-      for (var i = 0; i < args.length; i++) {
-        res(i, args[i]);
-      }
-    });
-  };
-
-  Promise.resolve = function (value) {
-    if (value && typeof value === 'object' && value.constructor === Promise) {
-      return value;
     }
 
-    return new Promise(function (resolve) {
-      resolve(value);
-    });
-  };
-
-  Promise.reject = function (value) {
-    return new Promise(function (resolve, reject) {
-      reject(value);
-    });
-  };
-
-  Promise.race = function (values) {
-    return new Promise(function (resolve, reject) {
-      for (var i = 0, len = values.length; i < len; i++) {
-        values[i].then(resolve, reject);
-      }
-    });
-  };
-
-  // Use polyfill for setImmediate for performance gains
-  Promise._immediateFn = (typeof setImmediate === 'function' && function (fn) { setImmediate(fn); }) ||
-    function (fn) {
-      setTimeoutFunc(fn, 0);
-    };
-
-  Promise._unhandledRejectionFn = function _unhandledRejectionFn(err) {
-    if (typeof console !== 'undefined' && console) {
-      console.warn('Possible Unhandled Promise Rejection:', err); // eslint-disable-line no-console
+    for (var i = 0; i < args.length; i++) {
+      res(i, args[i]);
     }
-  };
+  });
+};
 
-  /**
-   * Set the immediate function to execute callbacks
-   * @param fn {function} Function to execute
-   * @deprecated
-   */
-  Promise._setImmediateFn = function _setImmediateFn(fn) {
-    Promise._immediateFn = fn;
-  };
-
-  /**
-   * Change the function to execute on unhandled rejection
-   * @param {function} fn Function to execute on unhandled rejection
-   * @deprecated
-   */
-  Promise._setUnhandledRejectionFn = function _setUnhandledRejectionFn(fn) {
-    Promise._unhandledRejectionFn = fn;
-  };
-  
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = Promise;
-  } else if (!root.Promise) {
-    root.Promise = Promise;
+Promise.resolve = function(value) {
+  if (value && typeof value === 'object' && value.constructor === Promise) {
+    return value;
   }
 
-})(this);
+  return new Promise(function(resolve) {
+    resolve(value);
+  });
+};
 
-},{}],6:[function(_dereq_,module,exports){
+Promise.reject = function(value) {
+  return new Promise(function(resolve, reject) {
+    reject(value);
+  });
+};
+
+Promise.race = function(values) {
+  return new Promise(function(resolve, reject) {
+    for (var i = 0, len = values.length; i < len; i++) {
+      values[i].then(resolve, reject);
+    }
+  });
+};
+
+// Use polyfill for setImmediate for performance gains
+Promise._immediateFn =
+  (typeof setImmediate === 'function' &&
+    function(fn) {
+      setImmediate(fn);
+    }) ||
+  function(fn) {
+    setTimeoutFunc(fn, 0);
+  };
+
+Promise._unhandledRejectionFn = function _unhandledRejectionFn(err) {
+  if (typeof console !== 'undefined' && console) {
+    console.warn('Possible Unhandled Promise Rejection:', err); // eslint-disable-line no-console
+  }
+};
+
+module.exports = Promise;
+
+},{}],8:[function(_dereq_,module,exports){
 'use strict';
 
 var createAuthorizationData = _dereq_('./create-authorization-data');
@@ -374,9 +471,10 @@ function addMetadata(configuration, data) {
 
 module.exports = addMetadata;
 
-},{"./constants":10,"./create-authorization-data":12,"./json-clone":15}],7:[function(_dereq_,module,exports){
+},{"./constants":13,"./create-authorization-data":17,"./json-clone":21}],9:[function(_dereq_,module,exports){
 'use strict';
 
+var Promise = _dereq_('./promise');
 var constants = _dereq_('./constants');
 var addMetadata = _dereq_('./add-metadata');
 
@@ -384,40 +482,54 @@ function _millisToSeconds(millis) {
   return Math.floor(millis / 1000);
 }
 
-function sendAnalyticsEvent(client, kind, callback) {
-  var configuration = client.getConfiguration();
-  var request = client._request;
+function sendAnalyticsEvent(clientInstanceOrPromise, kind, callback) {
   var timestamp = _millisToSeconds(Date.now());
-  var url = configuration.gatewayConfiguration.analytics.url;
-  var data = {
-    analytics: [{
-      kind: constants.ANALYTICS_PREFIX + kind,
-      timestamp: timestamp
-    }]
-  };
 
-  request({
-    url: url,
-    method: 'post',
-    data: addMetadata(configuration, data),
-    timeout: constants.ANALYTICS_REQUEST_TIMEOUT_MS
-  }, callback);
+  return Promise.resolve(clientInstanceOrPromise).then(function (client) {
+    var timestampInPromise = _millisToSeconds(Date.now());
+    var configuration = client.getConfiguration();
+    var request = client._request;
+    var url = configuration.gatewayConfiguration.analytics.url;
+    var data = {
+      analytics: [{
+        kind: constants.ANALYTICS_PREFIX + kind,
+        isAsync: timestampInPromise !== timestamp,
+        timestamp: timestamp
+      }]
+    };
+
+    request({
+      url: url,
+      method: 'post',
+      data: addMetadata(configuration, data),
+      timeout: constants.ANALYTICS_REQUEST_TIMEOUT_MS
+    }, callback);
+  });
 }
 
 module.exports = {
   sendEvent: sendAnalyticsEvent
 };
 
-},{"./add-metadata":6,"./constants":10}],8:[function(_dereq_,module,exports){
+},{"./add-metadata":8,"./constants":13,"./promise":23}],10:[function(_dereq_,module,exports){
+'use strict';
+
+var loadScript = _dereq_('@braintree/asset-loader/load-script');
+
+module.exports = {
+  loadScript: loadScript
+};
+
+},{"@braintree/asset-loader/load-script":2}],11:[function(_dereq_,module,exports){
 'use strict';
 
 var BraintreeError = _dereq_('./braintree-error');
 var Promise = _dereq_('./promise');
 var sharedErrors = _dereq_('./errors');
-var VERSION = "3.26.0";
+var VERSION = "3.45.0";
 
 function basicComponentVerification(options) {
-  var client, clientVersion, name;
+  var client, authorization, name;
 
   if (!options) {
     return Promise.reject(new BraintreeError({
@@ -429,22 +541,23 @@ function basicComponentVerification(options) {
 
   name = options.name;
   client = options.client;
+  authorization = options.authorization;
 
-  if (client == null) {
+  if (client == null && authorization == null) {
     return Promise.reject(new BraintreeError({
       type: sharedErrors.INSTANTIATION_OPTION_REQUIRED.type,
       code: sharedErrors.INSTANTIATION_OPTION_REQUIRED.code,
+      // NEXT_MAJOR_VERSION in major version, we expose passing in authorization for all components
+      // instead of passing in a client instance. Leave this a silent feature for now.
       message: 'options.client is required when instantiating ' + name + '.'
     }));
   }
 
-  clientVersion = client.getVersion();
-
-  if (clientVersion !== VERSION) {
+  if (!authorization && client.getVersion() !== VERSION) {
     return Promise.reject(new BraintreeError({
       type: sharedErrors.INCOMPATIBLE_VERSIONS.type,
       code: sharedErrors.INCOMPATIBLE_VERSIONS.code,
-      message: 'Client (version ' + clientVersion + ') and ' + name + ' (version ' + VERSION + ') components must be from the same SDK version.'
+      message: 'Client (version ' + client.getVersion() + ') and ' + name + ' (version ' + VERSION + ') components must be from the same SDK version.'
     }));
   }
 
@@ -455,7 +568,7 @@ module.exports = {
   verify: basicComponentVerification
 };
 
-},{"./braintree-error":9,"./errors":14,"./promise":16}],9:[function(_dereq_,module,exports){
+},{"./braintree-error":12,"./errors":20,"./promise":23}],12:[function(_dereq_,module,exports){
 'use strict';
 
 var enumerate = _dereq_('./enumerate');
@@ -540,15 +653,38 @@ BraintreeError.findRootError = function (err) {
 
 module.exports = BraintreeError;
 
-},{"./enumerate":13}],10:[function(_dereq_,module,exports){
+},{"./enumerate":19}],13:[function(_dereq_,module,exports){
 'use strict';
 
-var VERSION = "3.26.0";
+var VERSION = "3.45.0";
 var PLATFORM = 'web';
 
+var CLIENT_API_URLS = {
+  production: 'https://api.braintreegateway.com:443',
+  sandbox: 'https://api.sandbox.braintreegateway.com:443'
+};
+
+var ASSETS_URLS = {
+  production: 'https://assets.braintreegateway.com',
+  sandbox: 'https://assets.braintreegateway.com'
+};
+
+var GRAPHQL_URLS = {
+  production: 'https://payments.braintree-api.com/graphql',
+  sandbox: 'https://payments.sandbox.braintree-api.com/graphql'
+};
+
+// endRemoveIf(production)
+
 module.exports = {
-  ANALYTICS_PREFIX: 'web.',
+  ANALYTICS_PREFIX: PLATFORM + '.',
   ANALYTICS_REQUEST_TIMEOUT_MS: 2000,
+  ASSETS_URLS: ASSETS_URLS,
+  CLIENT_API_URLS: CLIENT_API_URLS,
+  FRAUDNET_SOURCE: 'BRAINTREE_SIGNIN',
+  FRAUDNET_FNCLS: 'fnparams-dede7cc5-15fd-4c75-a9f4-36c430ee3a99',
+  FRAUDNET_URL: 'https://c.paypal.com/da/r/fb.js',
+  GRAPHQL_URLS: GRAPHQL_URLS,
   INTEGRATION_TIMEOUT_MS: 60000,
   VERSION: VERSION,
   INTEGRATION: 'custom',
@@ -557,7 +693,25 @@ module.exports = {
   BRAINTREE_LIBRARY_VERSION: 'braintree/' + PLATFORM + '/' + VERSION
 };
 
-},{}],11:[function(_dereq_,module,exports){
+},{}],14:[function(_dereq_,module,exports){
+'use strict';
+
+var BraintreeError = _dereq_('./braintree-error');
+var sharedErrors = _dereq_('./errors');
+
+module.exports = function (instance, methodNames) {
+  methodNames.forEach(function (methodName) {
+    instance[methodName] = function () {
+      throw new BraintreeError({
+        type: sharedErrors.METHOD_CALLED_AFTER_TEARDOWN.type,
+        code: sharedErrors.METHOD_CALLED_AFTER_TEARDOWN.code,
+        message: methodName + ' cannot be called after teardown.'
+      });
+    };
+  });
+};
+
+},{"./braintree-error":12,"./errors":20}],15:[function(_dereq_,module,exports){
 'use strict';
 
 var BraintreeError = _dereq_('./braintree-error');
@@ -579,17 +733,28 @@ function convertToBraintreeError(originalErr, btErrorObject) {
 
 module.exports = convertToBraintreeError;
 
-},{"./braintree-error":9}],12:[function(_dereq_,module,exports){
+},{"./braintree-error":12}],16:[function(_dereq_,module,exports){
+'use strict';
+
+// endRemoveIf(production)
+var ASSETS_URLS = _dereq_('./constants').ASSETS_URLS;
+
+function createAssetsUrl(authorization) {
+  // endRemoveIf(production)
+
+  return ASSETS_URLS.production;
+}
+/* eslint-enable */
+
+module.exports = {
+  create: createAssetsUrl
+};
+
+},{"./constants":13}],17:[function(_dereq_,module,exports){
 'use strict';
 
 var atob = _dereq_('../lib/vendor/polyfill').atob;
-
-var apiUrls = {
-  production: 'https://api.braintreegateway.com:443',
-  sandbox: 'https://api.sandbox.braintreegateway.com:443'
-};
-
-// endRemoveIf(production)
+var CLIENT_API_URLS = _dereq_('../lib/constants').CLIENT_API_URLS;
 
 function _isTokenizationKey(str) {
   return /^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9_]+$/.test(str);
@@ -615,12 +780,15 @@ function createAuthorizationData(authorization) {
 
   if (_isTokenizationKey(authorization)) {
     parsedTokenizationKey = _parseTokenizationKey(authorization);
+    data.environment = parsedTokenizationKey.environment;
     data.attrs.tokenizationKey = authorization;
-    data.configUrl = apiUrls[parsedTokenizationKey.environment] + '/merchants/' + parsedTokenizationKey.merchantId + '/client_api/v1/configuration';
+    data.configUrl = CLIENT_API_URLS[parsedTokenizationKey.environment] + '/merchants/' + parsedTokenizationKey.merchantId + '/client_api/v1/configuration';
   } else {
     parsedClientToken = JSON.parse(atob(authorization));
+    data.environment = parsedClientToken.environment;
     data.attrs.authorizationFingerprint = parsedClientToken.authorizationFingerprint;
     data.configUrl = parsedClientToken.configUrl;
+    data.graphQL = parsedClientToken.graphQL;
   }
 
   return data;
@@ -628,7 +796,61 @@ function createAuthorizationData(authorization) {
 
 module.exports = createAuthorizationData;
 
-},{"../lib/vendor/polyfill":17}],13:[function(_dereq_,module,exports){
+},{"../lib/constants":13,"../lib/vendor/polyfill":24}],18:[function(_dereq_,module,exports){
+(function (global){
+'use strict';
+
+var BraintreeError = _dereq_('./braintree-error');
+var Promise = _dereq_('./promise');
+var assets = _dereq_('./assets');
+var sharedErrors = _dereq_('./errors');
+
+var VERSION = "3.45.0";
+
+function createDeferredClient(options) {
+  var promise = Promise.resolve();
+
+  if (options.client) {
+    return Promise.resolve(options.client);
+  }
+
+  if (!(global.braintree && global.braintree.client)) {
+    promise = assets.loadScript({
+      src: options.assetsUrl + '/web/' + VERSION + '/js/client.min.js'
+    }).catch(function (err) {
+      return Promise.reject(new BraintreeError({
+        type: sharedErrors.CLIENT_SCRIPT_FAILED_TO_LOAD.type,
+        code: sharedErrors.CLIENT_SCRIPT_FAILED_TO_LOAD.code,
+        message: sharedErrors.CLIENT_SCRIPT_FAILED_TO_LOAD.message,
+        details: {
+          originalError: err
+        }
+      }));
+    });
+  }
+
+  return promise.then(function () {
+    if (global.braintree.client.VERSION !== VERSION) {
+      return Promise.reject(new BraintreeError({
+        type: sharedErrors.INCOMPATIBLE_VERSIONS.type,
+        code: sharedErrors.INCOMPATIBLE_VERSIONS.code,
+        message: 'Client (version ' + global.braintree.client.VERSION + ') and ' + options.name + ' (version ' + VERSION + ') components must be from the same SDK version.'
+      }));
+    }
+
+    return global.braintree.client.create({
+      authorization: options.authorization,
+      debug: options.debug
+    });
+  });
+}
+
+module.exports = {
+  create: createDeferredClient
+};
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./assets":10,"./braintree-error":12,"./errors":20,"./promise":23}],19:[function(_dereq_,module,exports){
 'use strict';
 
 function enumerate(values, prefix) {
@@ -643,8 +865,30 @@ function enumerate(values, prefix) {
 
 module.exports = enumerate;
 
-},{}],14:[function(_dereq_,module,exports){
+},{}],20:[function(_dereq_,module,exports){
 'use strict';
+
+/**
+ * @name BraintreeError.Shared Interal Error Codes
+ * @ignore
+ * @description These codes should never be experienced by the mechant directly.
+ * @property {INTERNAL} INVALID_USE_OF_INTERNAL_FUNCTION Occurs when the client is created without a gateway configuration. Should never happen.
+ */
+
+/**
+ * @name BraintreeError.Shared Errors - Component Creation Error Codes
+ * @description Errors that occur when creating components.
+ * @property {MERCHANT} INSTANTIATION_OPTION_REQUIRED Occurs when a component is created that is missing a required option.
+ * @property {MERCHANT} INCOMPATIBLE_VERSIONS Occurs when a component is created with a client with a different version than the component.
+ * @property {NETWORK} CLIENT_SCRIPT_FAILED_TO_LOAD Occurs when a component attempts to load the Braintree client script, but the request fails.
+ */
+
+/**
+ * @name BraintreeError.Shared Errors - Component Instance Error Codes
+ * @description Errors that occur when using instances of components.
+ * @property {MERCHANT} METHOD_CALLED_AFTER_TEARDOWN Occurs when a method is called on a component instance after it has been torn down.
+ * @property {MERCHANT} BRAINTREE_API_ACCESS_RESTRICTED Occurs when the client token or tokenization key does not have the correct permissions.
+ */
 
 var BraintreeError = _dereq_('./braintree-error');
 
@@ -653,21 +897,18 @@ module.exports = {
     type: BraintreeError.types.INTERNAL,
     code: 'INVALID_USE_OF_INTERNAL_FUNCTION'
   },
-  CALLBACK_REQUIRED: {
-    type: BraintreeError.types.MERCHANT,
-    code: 'CALLBACK_REQUIRED'
-  },
   INSTANTIATION_OPTION_REQUIRED: {
     type: BraintreeError.types.MERCHANT,
     code: 'INSTANTIATION_OPTION_REQUIRED'
   },
-  INVALID_OPTION: {
-    type: BraintreeError.types.MERCHANT,
-    code: 'INVALID_OPTION'
-  },
   INCOMPATIBLE_VERSIONS: {
     type: BraintreeError.types.MERCHANT,
     code: 'INCOMPATIBLE_VERSIONS'
+  },
+  CLIENT_SCRIPT_FAILED_TO_LOAD: {
+    type: BraintreeError.types.NETWORK,
+    code: 'CLIENT_SCRIPT_FAILED_TO_LOAD',
+    message: 'Braintree client script could not be loaded.'
   },
   METHOD_CALLED_AFTER_TEARDOWN: {
     type: BraintreeError.types.MERCHANT,
@@ -680,14 +921,23 @@ module.exports = {
   }
 };
 
-},{"./braintree-error":9}],15:[function(_dereq_,module,exports){
+},{"./braintree-error":12}],21:[function(_dereq_,module,exports){
 'use strict';
 
 module.exports = function (value) {
   return JSON.parse(JSON.stringify(value));
 };
 
-},{}],16:[function(_dereq_,module,exports){
+},{}],22:[function(_dereq_,module,exports){
+'use strict';
+
+module.exports = function (obj) {
+  return Object.keys(obj).filter(function (key) {
+    return typeof obj[key] === 'function';
+  });
+};
+
+},{}],23:[function(_dereq_,module,exports){
 (function (global){
 'use strict';
 
@@ -696,7 +946,7 @@ var Promise = global.Promise || _dereq_('promise-polyfill');
 module.exports = Promise;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"promise-polyfill":5}],17:[function(_dereq_,module,exports){
+},{"promise-polyfill":7}],24:[function(_dereq_,module,exports){
 (function (global){
 'use strict';
 
@@ -737,8 +987,29 @@ module.exports = {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],18:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 'use strict';
+
+/**
+ * @name BraintreeError.PayPal Checkout - Creation Error Codes
+ * @description Errors that occur when [creating the PayPal Checkout component](/current/module-braintree-web_paypal-checkout.html#.create).
+ * @property {MERCHANT} PAYPAL_NOT_ENABLED Occurs when PayPal is not enabled on the Braintree control panel.
+ * @property {MERCHANT} PAYPAL_SANDBOX_ACCOUNT_NOT_LINKED Occurs only when testing in Sandbox, when a PayPal sandbox account is not linked to the merchant account in the Braintree control panel.
+ */
+
+/**
+ * @name BraintreeError.PayPal Checkout - createPayment Error Codes
+ * @description Errors that occur when using the [`createPayment` method](/current/PayPalCheckout.html#createPayment).
+ * @property {MERCHANT} PAYPAL_FLOW_OPTION_REQUIRED Occurs when a required option is missing.
+ * @property {MERCHANT} PAYPAL_INVALID_PAYMENT_OPTION Occurs when an option contains an invalid value.
+ * @property {NETWORK} PAYPAL_FLOW_FAILED Occurs when something goes wrong when initializing the flow.
+ */
+
+/**
+ * @name BraintreeError.PayPal Checkout - tokenizePayment Error Codes
+ * @description Errors that occur when using the [`tokenizePayment` method](/current/PayPalCheckout.html#tokenizePayment).
+ * @property {NETWORK} PAYPAL_ACCOUNT_TOKENIZATION_FAILED Occurs when PayPal account could not be tokenized.
+ */
 
 var BraintreeError = _dereq_('../lib/braintree-error');
 
@@ -752,11 +1023,6 @@ module.exports = {
     type: BraintreeError.types.MERCHANT,
     code: 'PAYPAL_SANDBOX_ACCOUNT_NOT_LINKED',
     message: 'A linked PayPal Sandbox account is required to use PayPal Checkout in Sandbox. See https://developers.braintreepayments.com/guides/paypal/testing-go-live/#linked-paypal-testing for details on linking your PayPal sandbox with Braintree.'
-  },
-  PAYPAL_TOKENIZATION_REQUEST_ACTIVE: {
-    type: BraintreeError.types.MERCHANT,
-    code: 'PAYPAL_TOKENIZATION_REQUEST_ACTIVE',
-    message: 'Another tokenization request is active.'
   },
   PAYPAL_ACCOUNT_TOKENIZATION_FAILED: {
     type: BraintreeError.types.NETWORK,
@@ -773,16 +1039,6 @@ module.exports = {
     code: 'PAYPAL_FLOW_OPTION_REQUIRED',
     message: 'PayPal flow property is invalid or missing.'
   },
-  PAYPAL_POPUP_OPEN_FAILED: {
-    type: BraintreeError.types.MERCHANT,
-    code: 'PAYPAL_POPUP_OPEN_FAILED',
-    message: 'PayPal popup failed to open, make sure to tokenize in response to a user action.'
-  },
-  PAYPAL_POPUP_CLOSED: {
-    type: BraintreeError.types.CUSTOMER,
-    code: 'PAYPAL_POPUP_CLOSED',
-    message: 'Customer closed PayPal popup before authorizing.'
-  },
   PAYPAL_INVALID_PAYMENT_OPTION: {
     type: BraintreeError.types.MERCHANT,
     code: 'PAYPAL_INVALID_PAYMENT_OPTION',
@@ -790,88 +1046,53 @@ module.exports = {
   }
 };
 
-},{"../lib/braintree-error":9}],19:[function(_dereq_,module,exports){
+},{"../lib/braintree-error":12}],26:[function(_dereq_,module,exports){
 'use strict';
 /**
  * @module braintree-web/paypal-checkout
  * @description A component to integrate with the [PayPal Checkout.js library](https://github.com/paypal/paypal-checkout).
  */
 
-var BraintreeError = _dereq_('../lib/braintree-error');
-var analytics = _dereq_('../lib/analytics');
 var basicComponentVerification = _dereq_('../lib/basic-component-verification');
-var errors = _dereq_('./errors');
-var Promise = _dereq_('../lib/promise');
 var wrapPromise = _dereq_('@braintree/wrap-promise');
 var PayPalCheckout = _dereq_('./paypal-checkout');
-var VERSION = "3.26.0";
+var VERSION = "3.45.0";
 
 /**
  * @static
  * @function create
+ * @description There are two ways to integrate the PayPal Checkout component. See the [PayPal Checkout constructor documentation](PayPalCheckout.html#PayPalCheckout) for more information and examples.
+ *
  * @param {object} options Creation options:
- * @param {Client} options.client A {@link Client} instance.
+ * @param {Client} [options.client] A {@link Client} instance.
+ * @param {string} [options.authorization] A tokenizationKey or clientToken. Can be used in place of `options.client`.
+ * @param {string} [options.merchantAccountId] A non-default merchant account ID to use for tokenization.
  * @param {callback} [callback] The second argument, `data`, is the {@link PayPalCheckout} instance.
  * @example
- * // Be sure to have checkout.js loaded on your page.
- * // You can use the paypal-checkout package on npm
- * // with a build tool or use a script hosted by PayPal:
- * // <script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
- *
- * braintree.paypalCheckout.create({
- *   client: clientInstance
- * }, function (createErr, paypalCheckoutInstance) {
- *   if (createErr) {
- *     console.error('Error!', createErr);
- *     return;
- *   }
- *
- *   paypal.Button.render({
- *     env: 'production', // or 'sandbox'
- *
- *     locale: 'en_US',
- *
- *     payment: function () {
- *       return paypalCheckoutInstance.createPayment({
- *         flow: 'vault'
- *       });
- *     },
- *
- *     onAuthorize: function (data, actions) {
- *       return paypalCheckoutInstance.tokenizePayment(data).then(function (payload) {
- *         // Submit payload.nonce to your server
- *       });
- *     },
- *
- *     onCancel: function (data) {
- *       console.log('checkout.js payment cancelled', JSON.stringify(data, 0, 2));
- *     },
- *
- *     onError: function (err) {
- *       console.error('checkout.js error', err);
- *     }
- *   }, '#paypal-button'); // the PayPal button will be rendered in an html element with the id `paypal-button`
+ * braintree.client.create({
+ *   authorization: 'authorization'
+ * }).then(function (clientInstance) {
+ *   return braintree.paypalCheckout.create({
+ *     client: clientInstance
+ *   });
+ * }).then(function (paypalCheckoutInstance) {
+ *   // set up checkout.js
+ * }).catch(function (err) {
+ *   console.error('Error!', err);
  * });
  * @returns {Promise|void} Returns a promise if no callback is provided.
  */
 function create(options) {
+  var name = 'PayPal Checkout';
+
   return basicComponentVerification.verify({
-    name: 'PayPal Checkout',
-    client: options.client
+    name: name,
+    client: options.client,
+    authorization: options.authorization
   }).then(function () {
-    var config = options.client.getConfiguration();
+    var instance = new PayPalCheckout(options);
 
-    if (!config.gatewayConfiguration.paypalEnabled) {
-      return Promise.reject(new BraintreeError(errors.PAYPAL_NOT_ENABLED));
-    }
-
-    if (!config.gatewayConfiguration.paypal.clientId) {
-      return Promise.reject(new BraintreeError(errors.PAYPAL_SANDBOX_ACCOUNT_NOT_LINKED));
-    }
-
-    analytics.sendEvent(options.client, 'paypal-checkout.initialized');
-
-    return new PayPalCheckout(options);
+    return instance._initialize(options);
   });
 }
 
@@ -880,12 +1101,6 @@ function create(options) {
  * @function isSupported
  * @description Returns true if PayPal Checkout [supports this browser](index.html#browser-support-webviews).
  * @deprecated Previously, this method checked for Popup support in the browser. Checkout.js now falls back to a modal if popups are not supported.
- * @example
- * if (braintree.paypalCheckout.isSupported()) {
- *   // Add PayPal button to the page
- * } else {
- *   // Hide PayPal payment option
- * }
  * @returns {Boolean} Returns true if PayPal Checkout supports this browser.
  */
 function isSupported() {
@@ -902,16 +1117,20 @@ module.exports = {
   VERSION: VERSION
 };
 
-},{"../lib/analytics":7,"../lib/basic-component-verification":8,"../lib/braintree-error":9,"../lib/promise":16,"./errors":18,"./paypal-checkout":20,"@braintree/wrap-promise":4}],20:[function(_dereq_,module,exports){
+},{"../lib/basic-component-verification":11,"./paypal-checkout":27,"@braintree/wrap-promise":6}],27:[function(_dereq_,module,exports){
 'use strict';
 
 var analytics = _dereq_('../lib/analytics');
+var createDeferredClient = _dereq_('../lib/create-deferred-client');
+var createAssetsUrl = _dereq_('../lib/create-assets-url');
 var Promise = _dereq_('../lib/promise');
 var wrapPromise = _dereq_('@braintree/wrap-promise');
 var BraintreeError = _dereq_('../lib/braintree-error');
 var convertToBraintreeError = _dereq_('../lib/convert-to-braintree-error');
 var errors = _dereq_('./errors');
 var constants = _dereq_('../paypal/shared/constants');
+var methods = _dereq_('../lib/methods');
+var convertMethodsToError = _dereq_('../lib/convert-methods-to-error');
 
 /**
  * PayPal Checkout tokenized payload. Returned in {@link PayPalCheckout#tokenizePayment}'s callback as the second argument, `data`.
@@ -960,14 +1179,201 @@ var constants = _dereq_('../paypal/shared/constants');
 /**
  * @class
  * @param {object} options see {@link module:braintree-web/paypal-checkout.create|paypal-checkout.create}
- * @classdesc This class represents a PayPal Checkout component that coordinates with the {@link https://developer.paypal.com/docs/integration/direct/express-checkout/integration-jsv4|PayPal checkout.js} library. Instances of this class can generate payment data and tokenize authorized payments.
+ * @classdesc This class represents a PayPal Checkout component that coordinates with the {@link https://developer.paypal.com/docs/checkout/integrate/#2-add-the-paypal-script-to-your-web-page|PayPal SDK}. Instances of this class can generate payment data and tokenize authorized payments.
  *
- * All UI (such as preventing actions on the parent page while authentication is in progress) is managed by {@link https://developer.paypal.com/docs/integration/direct/express-checkout/integration-jsv4|checkout.js}.
+ * All UI (such as preventing actions on the parent page while authentication is in progress) is managed by the {@link https://developer.paypal.com/docs/checkout/integrate/#2-add-the-paypal-script-to-your-web-page|PayPal SDK}. You must provide your PayPal `client-id` as a query parameter. You can [retrieve this value from the PayPal Dashboard](https://developer.paypal.com/docs/checkout/integrate/#1-get-paypal-rest-api-credentials).
  * @description <strong>Do not use this constructor directly. Use {@link module:braintree-web/paypal-checkout.create|braintree-web.paypal-checkout.create} instead.</strong>
+ *
+ * #### Integrate Checkout Flow with PayPal SDK
+ *
+ * You must have [PayPal's script, configured with various query parameters](https://developer.paypal.com/docs/checkout/integrate/#2-add-the-paypal-script-to-your-web-page), loaded on your page:
+ *
+ * ```html
+ * <script src="https://www.paypal.com/sdk/js?client-id=your-sandbox-or-prod-client-id"></script>
+ * <div id="paypal-button"></div>
+ * ```
+ *
+ * When passing values in the `createPayment` method, make sure they match the [corresponding parameters in the query parameters for the PayPal SDK script](https://developer.paypal.com/docs/checkout/reference/customize-sdk/).
+ *
+ * ```javascript
+ * braintree.client.create({
+ *   authorization: 'authorization'
+ * }).then(function (clientInstance) {
+ *   return braintree.paypalCheckout.create({
+ *     client: clientInstance
+ *   });
+ * }).then(function (paypalCheckoutInstance) {
+ *   return paypal.Buttons({
+ *     createOrder: function () {
+ *       return paypalCheckoutInstance.createPayment({
+ *         flow: 'checkout',
+ *         currency: 'USD',
+ *         amount: '10.00',
+ *         intent: 'capture' // this value must either be `capture` or match the intent passed into the PayPal SDK intent query parameter
+ *         // your other createPayment options here
+ *       });
+ *     },
+ *
+ *     onApprove: function (data, actions) {
+ *       // some logic here before tokenization happens below
+ *       return paypalCheckoutInstance.tokenizePayment(data).then(function (payload) {
+ *         // Submit payload.nonce to your server
+ *       });
+ *     },
+ *
+ *     onCancel: function () {
+ *       // handle case where user cancels
+ *     },
+ *
+ *     onError: function (err) {
+ *       // handle case where error occurs
+ *     }
+ *   }).render('#paypal-button');
+ * }).catch(function (err) {
+ *  console.error('Error!', err);
+ * });
+ * ```
+ *
+ * #### Integrate Vault Flow with PayPal SDK
+ *
+ * You must have [PayPal's script, configured with various query parameters](https://developer.paypal.com/docs/checkout/integrate/#2-add-the-paypal-script-to-your-web-page), loaded on your page:
+ *
+ * ```html
+ * <script src="https://www.paypal.com/sdk/js?client-id=your-sandbox-or-prod-client-id&vault=true"></script>
+ * <div id="paypal-button"></div>
+ * ```
+ *
+ * When passing values in the `createPayment` method, make sure they match the [corresponding parameters in the query parameters for the PayPal SDK script](https://developer.paypal.com/docs/checkout/reference/customize-sdk/).
+ *
+ * ```javascript
+ * braintree.client.create({
+ *   authorization: 'authorization'
+ * }).then(function (clientInstance) {
+ *   return braintree.paypalCheckout.create({
+ *     client: clientInstance
+ *   });
+ * }).then(function (paypalCheckoutInstance) {
+ *   return paypal.Buttons({
+ *     createBillingAgreement: function () {
+ *       return paypalCheckoutInstance.createPayment({
+ *         flow: 'vault'
+ *         // your other createPayment options here
+ *       });
+ *     },
+ *
+ *     onApprove: function (data, actions) {
+ *       // some logic here before tokenization happens below
+ *       return paypalCheckoutInstance.tokenizePayment(data).then(function (payload) {
+ *         // Submit payload.nonce to your server
+ *       });
+ *     },
+ *
+ *     onCancel: function () {
+ *       // handle case where user cancels
+ *     },
+ *
+ *     onError: function (err) {
+ *       // handle case where error occurs
+ *     }
+ *   }).render('#paypal-button');
+ * }).catch(function (err) {
+ *  console.error('Error!', err);
+ * });
+ * ```
+ *
+ * #### Integrate with Checkout.js (deprecated PayPal SDK)
+ *
+ * You must have PayPal's checkout.js script loaded on your page. You can either use the [paypal-checkout package on npm](https://www.npmjs.com/package/paypal-checkout) with a build tool or use a script hosted by PayPal:
+ *
+ * ```html
+ * <script src="https://www.paypalobjects.com/api/checkout.js" data-version-4 log-level="warn"></script>
+ * ```
+ *
+ * ```javascript
+ * braintree.client.create({
+ *   authorization: 'authorization'
+ * }).then(function (clientInstance) {
+ *   return braintree.paypalCheckout.create({
+ *     client: clientInstance
+ *   });
+ * }).then(function (paypalCheckoutInstance) {
+ *   return paypal.Button.render({
+ *     env: 'production', // or 'sandbox'
+ *
+ *     payment: function () {
+ *       return paypalCheckoutInstance.createPayment({
+ *         // your createPayment options here
+ *       });
+ *     },
+ *
+ *     onAuthorize: function (data, actions) {
+ *       // some logic here before tokenization happens below
+ *       return paypalCheckoutInstance.tokenizePayment(data).then(function (payload) {
+ *         // Submit payload.nonce to your server
+ *       });
+ *     }
+ *   }, '#paypal-button');
+ * }).catch(function (err) {
+ *  console.error('Error!', err);
+ * });
+ * ```
  */
 function PayPalCheckout(options) {
-  this._client = options.client;
+  this._merchantAccountId = options.merchantAccountId;
 }
+
+PayPalCheckout.prototype._initialize = function (options) {
+  this._clientPromise = createDeferredClient.create({
+    authorization: options.authorization,
+    client: options.client,
+    debug: options.debug,
+    assetsUrl: createAssetsUrl.create(options.authorization),
+    name: 'PayPal Checkout'
+  }).then(function (client) {
+    this._configuration = client.getConfiguration();
+
+    // we skip these checks if a merchant account id is
+    // passed in, because the default merchant account
+    // may not have paypal enabled
+    if (!this._merchantAccountId) {
+      if (!this._configuration.gatewayConfiguration.paypalEnabled) {
+        this._setupError = new BraintreeError(errors.PAYPAL_NOT_ENABLED);
+      } else if (this._configuration.gatewayConfiguration.paypal.environmentNoNetwork === true) {
+        this._setupError = new BraintreeError(errors.PAYPAL_SANDBOX_ACCOUNT_NOT_LINKED);
+      }
+    }
+
+    if (this._setupError) {
+      return Promise.reject(this._setupError);
+    }
+
+    analytics.sendEvent(client, 'paypal-checkout.initialized');
+
+    return client;
+  }.bind(this));
+
+  // if client was passed in, let config checks happen before
+  // resolving the instance. Otherwise, just resolve the instance
+  if (options.client) {
+    return this._clientPromise.then(function () {
+      return this;
+    }.bind(this));
+  }
+
+  return Promise.resolve(this);
+};
+
+/**
+ * @typedef {object} PayPalCheckout~lineItem
+ * @property {string} quantity Number of units of the item purchased. This value must be a whole number and can't be negative or zero.
+ * @property {string} unitAmount Per-unit price of the item. Can include up to 2 decimal places. This value can't be negative or zero.
+ * @property {string} name Item name. Maximum 127 characters.
+ * @property {string} kind Indicates whether the line item is a debit (sale) or credit (refund) to the customer. Accepted values: `debit` and `credit`.
+ * @property {?string} unitTaxAmount Per-unit tax price of the item. Can include up to 2 decimal places. This value can't be negative or zero.
+ * @property {?string} description Item description. Maximum 127 characters.
+ * @property {?string} productCode Product or UPC code for the item. Maximum 127 characters.
+ * @property {?string} url The URL to product information.
+ */
 
 /**
  * Creates a PayPal payment ID or billing token using the given options. This is meant to be passed to PayPal's checkout.js library.
@@ -978,7 +1384,7 @@ function PayPalCheckout(options) {
  * @param {string} [options.intent=authorize]
  * * `authorize` - Submits the transaction for authorization but not settlement.
  * * `order` - Validates the transaction without an authorization (i.e. without holding funds). Useful for authorizing and capturing funds up to 90 days after the order has been placed. Only available for Checkout flow.
- * * `sale` - Payment will be immediately submitted for settlement upon creating a transaction.
+ * * `capture` - Payment will be immediately submitted for settlement upon creating a transaction. `sale` can be used as an alias for this value.
  * @param {boolean} [options.offerCredit=false] Offers PayPal Credit as the default funding instrument for the transaction. If the customer isn't pre-approved for PayPal Credit, they will be prompted to apply for it.
  * @param {string|number} [options.amount] The amount of the transaction. Required when using the Checkout flow.
  * @param {string} [options.currency] The currency code of the amount, such as 'USD'. Required when using the Checkout flow.
@@ -1025,26 +1431,28 @@ function PayPalCheckout(options) {
  * @param {string} [options.landingPageType] Use this option to specify the PayPal page to display when a user lands on the PayPal site to complete the payment.
  * * `login` - A PayPal account login page is used.
  * * `billing` - A non-PayPal account landing page is used.
+* @property {lineItem[]} [options.lineItems] The line items for this transaction. It can include up to 249 line items.
  * @param {callback} [callback] The second argument is a PayPal `paymentId` or `billingToken` string, depending on whether `options.flow` is `checkout` or `vault`. This is also what is resolved by the promise if no callback is provided.
  * @example
  * // this paypal object is created by checkout.js
  * // see https://github.com/paypal/paypal-checkout
- * paypal.Button.render({
- *   // when createPayment resolves, it is automatically passed to checkout.js
- *   payment: function () {
- *    return paypalCheckoutInstance.createPayment({
+ * paypal.Buttons({
+ *   createOrder: function () {
+ *     // when createPayment resolves, it is automatically passed to checkout.js
+ *     return paypalCheckoutInstance.createPayment({
  *       flow: 'checkout',
  *       amount: '10.00',
  *       currency: 'USD',
- *       intent: 'sale'
+ *       intent: 'capture' // this value must either be `capture` or match the intent passed into the PayPal SDK intent query parameter
  *     });
  *   },
- *   // Add other options, e.g. onAuthorize, env, locale
- * }, '#paypal-button');
+ *   // Add other options, e.g. onApproved, onCancel, onError
+ * }).render('#paypal-button');
  *
  * @returns {Promise|void} Returns a promise if no callback is provided.
  */
 PayPalCheckout.prototype.createPayment = function (options) {
+  var self = this;
   var endpoint;
 
   if (!options || !constants.FLOW_ENDPOINTS.hasOwnProperty(options.flow)) {
@@ -1053,27 +1461,35 @@ PayPalCheckout.prototype.createPayment = function (options) {
 
   endpoint = 'paypal_hermes/' + constants.FLOW_ENDPOINTS[options.flow];
 
-  analytics.sendEvent(this._client, 'paypal-checkout.createPayment');
+  analytics.sendEvent(this._clientPromise, 'paypal-checkout.createPayment');
   if (options.offerCredit === true) {
-    analytics.sendEvent(this._client, 'paypal-checkout.credit.offered');
+    analytics.sendEvent(this._clientPromise, 'paypal-checkout.credit.offered');
   }
 
-  return this._client.request({
-    endpoint: endpoint,
-    method: 'post',
-    data: this._formatPaymentResourceData(options)
+  return this._clientPromise.then(function (client) {
+    return client.request({
+      endpoint: endpoint,
+      method: 'post',
+      data: self._formatPaymentResourceData(options)
+    });
   }).then(function (response) {
     var flowToken;
 
     if (options.flow === 'checkout') {
-      flowToken = response.paymentResource.paymentToken;
+      flowToken = response.paymentResource.redirectUrl.match(/EC-\w+/)[0];
     } else {
       flowToken = response.agreementSetup.tokenId;
     }
 
     return flowToken;
   }).catch(function (err) {
-    var status = err.details && err.details.httpStatus;
+    var status;
+
+    if (self._setupError) {
+      return Promise.reject(self._setupError);
+    }
+
+    status = err.details && err.details.httpStatus;
 
     if (status === 422) {
       return Promise.reject(new BraintreeError({
@@ -1099,16 +1515,15 @@ PayPalCheckout.prototype.createPayment = function (options) {
  * When a {@link callback} is defined, invokes the callback with {@link PayPalCheckout~tokenizePayload|tokenizePayload} and returns undefined. Otherwise, returns a Promise that resolves with a {@link PayPalCheckout~tokenizePayload|tokenizePayload}.
  * @public
  * @param {object} tokenizeOptions Tokens and IDs required to tokenize the payment.
- * @param {string} tokenizeOptions.payerId Payer ID returned by PayPal `onAuthorize` callback.
- * @param {string} [tokenizeOptions.paymentId] Payment ID returned by PayPal `onAuthorize` callback.
- * @param {string} [tokenizeOptions.billingToken] Billing Token returned by PayPal `onAuthorize` callback.
+ * @param {string} tokenizeOptions.payerId Payer ID returned by PayPal `onApproved` callback.
+ * @param {string} [tokenizeOptions.paymentId] Payment ID returned by PayPal `onApproved` callback.
+ * @param {string} [tokenizeOptions.billingToken] Billing Token returned by PayPal `onApproved` callback.
  * @param {callback} [callback] The second argument, <code>payload</code>, is a {@link PayPalCheckout~tokenizePayload|tokenizePayload}. If no callback is provided, the promise resolves with a {@link PayPalCheckout~tokenizePayload|tokenizePayload}.
  * @returns {Promise|void} Returns a promise if no callback is provided.
  */
 PayPalCheckout.prototype.tokenizePayment = function (tokenizeOptions) {
   var self = this;
   var payload;
-  var client = this._client;
   var options = {
     flow: tokenizeOptions.billingToken ? 'vault' : 'checkout',
     intent: tokenizeOptions.intent
@@ -1121,23 +1536,29 @@ PayPalCheckout.prototype.tokenizePayment = function (tokenizeOptions) {
     paymentId: tokenizeOptions.paymentID
   };
 
-  analytics.sendEvent(client, 'paypal-checkout.tokenization.started');
+  analytics.sendEvent(this._clientPromise, 'paypal-checkout.tokenization.started');
 
-  return client.request({
-    endpoint: 'payment_methods/paypal_accounts',
-    method: 'post',
-    data: self._formatTokenizeData(options, params)
+  return this._clientPromise.then(function (client) {
+    return client.request({
+      endpoint: 'payment_methods/paypal_accounts',
+      method: 'post',
+      data: self._formatTokenizeData(options, params)
+    });
   }).then(function (response) {
     payload = self._formatTokenizePayload(response);
 
-    analytics.sendEvent(client, 'paypal-checkout.tokenization.success');
+    analytics.sendEvent(self._clientPromise, 'paypal-checkout.tokenization.success');
     if (payload.creditFinancingOffered) {
-      analytics.sendEvent(client, 'paypal-checkout.credit.accepted');
+      analytics.sendEvent(self._clientPromise, 'paypal-checkout.credit.accepted');
     }
 
     return payload;
   }).catch(function (err) {
-    analytics.sendEvent(client, 'paypal-checkout.tokenization.failed');
+    if (self._setupError) {
+      return Promise.reject(self._setupError);
+    }
+
+    analytics.sendEvent(self._clientPromise, 'paypal-checkout.tokenization.failed');
 
     return Promise.reject(convertToBraintreeError(err, {
       type: errors.PAYPAL_ACCOUNT_TOKENIZATION_FAILED.type,
@@ -1149,13 +1570,18 @@ PayPalCheckout.prototype.tokenizePayment = function (tokenizeOptions) {
 
 PayPalCheckout.prototype._formatPaymentResourceData = function (options) {
   var key;
-  var gatewayConfiguration = this._client.getConfiguration().gatewayConfiguration;
+  var gatewayConfiguration = this._configuration.gatewayConfiguration;
+  // NEXT_MAJOR_VERSION default value for intent in PayPal SDK is capture
+  // but our integrations default value is authorize. Default this to capture
+  // in the next major version.
+  var intent = options.intent;
   var paymentResource = {
     // returnUrl and cancelUrl are required in hermes create_payment_resource route
-    // but are not validated and are not actually used with checkout.js
-    returnUrl: 'x',
-    cancelUrl: 'x',
+    // but are not used by the PayPal sdk, except to redirect to an error page
+    returnUrl: 'https://www.paypal.com/checkoutnow/error',
+    cancelUrl: 'https://www.paypal.com/checkoutnow/error',
     offerPaypalCredit: options.offerCredit === true,
+    merchantAccountId: this._merchantAccountId,
     experienceProfile: {
       brandName: options.displayName || gatewayConfiguration.paypal.displayName,
       localeCode: options.locale,
@@ -1169,8 +1595,18 @@ PayPalCheckout.prototype._formatPaymentResourceData = function (options) {
     paymentResource.amount = options.amount;
     paymentResource.currencyIsoCode = options.currency;
 
-    if (options.hasOwnProperty('intent')) {
-      paymentResource.intent = options.intent;
+    if (intent) {
+      // 'sale' has been changed to 'capture' in PayPal's backend, but
+      // we use an old version with 'sale'. We provide capture as an alias
+      // to match the PayPal SDK
+      if (intent === 'capture') {
+        intent = 'sale';
+      }
+      paymentResource.intent = intent;
+    }
+
+    if (options.hasOwnProperty('lineItems')) {
+      paymentResource.lineItems = options.lineItems;
     }
 
     for (key in options.shippingAddressOverride) {
@@ -1190,7 +1626,7 @@ PayPalCheckout.prototype._formatPaymentResourceData = function (options) {
 };
 
 PayPalCheckout.prototype._formatTokenizeData = function (options, params) {
-  var clientConfiguration = this._client.getConfiguration();
+  var clientConfiguration = this._configuration;
   var gatewayConfiguration = clientConfiguration.gatewayConfiguration;
   var isTokenizationKey = clientConfiguration.authorizationType === 'TOKENIZATION_KEY';
   var data = {
@@ -1212,6 +1648,10 @@ PayPalCheckout.prototype._formatTokenizeData = function (options, params) {
     if (options.intent) {
       data.paypalAccount.intent = options.intent;
     }
+  }
+
+  if (this._merchantAccountId) {
+    data.merchantAccountId = this._merchantAccountId;
   }
 
   return data;
@@ -1242,9 +1682,27 @@ PayPalCheckout.prototype._formatTokenizePayload = function (response) {
   return payload;
 };
 
+/**
+ * Cleanly tear down anything set up by {@link module:braintree-web/paypal-checkout.create|create}.
+ * @public
+ * @param {callback} [callback] Called once teardown is complete. No data is returned if teardown completes successfully.
+ * @example
+ * paypalCheckoutInstance.teardown();
+ * @example <caption>With callback</caption>
+ * paypalCheckoutInstance.teardown(function () {
+ *   // teardown is complete
+ * });
+ * @returns {Promise|void} Returns a promise if no callback is provided.
+ */
+PayPalCheckout.prototype.teardown = function () {
+  convertMethodsToError(this, methods(PayPalCheckout.prototype));
+
+  return Promise.resolve();
+};
+
 module.exports = wrapPromise.wrapPrototype(PayPalCheckout);
 
-},{"../lib/analytics":7,"../lib/braintree-error":9,"../lib/convert-to-braintree-error":11,"../lib/promise":16,"../paypal/shared/constants":21,"./errors":18,"@braintree/wrap-promise":4}],21:[function(_dereq_,module,exports){
+},{"../lib/analytics":9,"../lib/braintree-error":12,"../lib/convert-methods-to-error":14,"../lib/convert-to-braintree-error":15,"../lib/create-assets-url":16,"../lib/create-deferred-client":18,"../lib/methods":22,"../lib/promise":23,"../paypal/shared/constants":28,"./errors":25,"@braintree/wrap-promise":6}],28:[function(_dereq_,module,exports){
 'use strict';
 
 module.exports = {
@@ -1255,5 +1713,5 @@ module.exports = {
   }
 };
 
-},{}]},{},[19])(19)
+},{}]},{},[26])(26)
 });
